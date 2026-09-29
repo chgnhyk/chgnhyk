@@ -15,7 +15,7 @@ pip install chgnhyk
 
 ffmpeg 
 - required to generate video with moviepy
-- not required to when using `render_pyav()` function in `ClipRenderer`
+- not required when using `render_pyav()` function in `ClipRenderer`
 
 csound 
 libcsnd6-6.0v5 
@@ -52,7 +52,7 @@ pip install "chgnhyk[audio, window, mediapipe]"
 
 ## Usage
 
-# Basic example 1:
+### Basic example 1:
 - moviepy(ffmpeg needed) as video encoding backend
 ```python
 from chgnhyk import FBO, ClipRenderer
@@ -99,7 +99,7 @@ CTX.release()
 ```
 
 
-# Basic example 2:
+### Basic example 2:
 - pyav as video encoding backend
 ```python
 from chgnhyk import FBO, ClipRenderer
@@ -144,7 +144,7 @@ CTX.release()
 ```
 
 
-# Video example:
+### Video example:
 - create "sample" folder
 - create "shaders" folder and put shader files there
 
