@@ -1,6 +1,6 @@
 # Package Name
 
-Visual and audio engine of Choi Gunhyuk
+Visual engine of Choi Gunhyuk
 
 ## Installation
 
