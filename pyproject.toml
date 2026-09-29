@@ -1,0 +1,41 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "chgnhyk"
+version = "0.0.15"
+description = "visual engine of chgnhyk"
+readme = "README.md"
+requires-python = ">=3.9.0"
+dependencies = [
+    "moderngl",
+    "numpy",
+    "pillow",
+    "moviepy>=2.2.1",
+    "svgpathtools",
+    "trimesh",
+    "pyrr",
+    "av"
+]
+
+[project.optional-dependencies]
+opencv = [
+    "opencv-python"
+]
+
+mediapipe = [
+    "numpy==1.26.4"
+]
+audio = [
+    "csoundengine"
+]
+window = [
+    "moderngl_window"
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
