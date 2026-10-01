@@ -277,4 +277,5 @@ Choi Gunhyuk
 
 ## Links
 
+* Pypi: https://pypi.org/project/chgnhyk
 * GitHub: https://github.com/hlp-pls/chgnhyk

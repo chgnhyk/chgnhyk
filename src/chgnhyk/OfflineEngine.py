@@ -144,6 +144,7 @@ class ClipRenderer:
             stps = int(timer * self.duration * self.fps)
             for stp in range(stps):
                 timer = stp / (self.duration * self.fps - 1)
+                progress_bar((stp+1)/(stps) * 100)
                 self.render_(timer)
         else:
             timer = self.getClipTimer(t)
