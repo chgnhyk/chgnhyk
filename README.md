@@ -77,7 +77,7 @@ void main() {
     vec2 uv = UV;
     vec2 rs = resolution;
 
-    outputColor = vec4(uv, 1., 1.);
+    outputColor = vec4(uv, loop_timer, 1.);
 }
 '''
 
@@ -124,7 +124,7 @@ void main() {
     vec2 uv = UV;
     vec2 rs = resolution;
 
-    outputColor = vec4(uv, 1., 1.);
+    outputColor = vec4(uv, loop_timer, 1.);
 }
 '''
 
@@ -278,4 +278,4 @@ Choi Gunhyuk
 ## Links
 
 * Pypi: https://pypi.org/project/chgnhyk
-* GitHub: https://github.com/hlp-pls/chgnhyk
+* GitHub: https://github.com/chgnhyk
