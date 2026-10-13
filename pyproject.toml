@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "chgnhyk"
-version = "0.0.21"
+version = "0.0.22"
 description = "visual engine of chgnhyk"
 readme = "README.md"
 requires-python = ">=3.9.0"
@@ -14,15 +14,12 @@ dependencies = [
     "pillow",
     "moviepy>=2.2.1",
     "svgpathtools",
-    "av"
-]
-
-[project.optional-dependencies]
-geometry = [
+    "av",
     "trimesh",
     "pyrr"
 ]
 
+[project.optional-dependencies]
 opencv = [
     "opencv-python"
 ]

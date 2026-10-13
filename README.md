@@ -23,17 +23,17 @@ libcsnd6-6.0v5
 
 ### Installation options
 ```bash
-pip install chgnhyk[audio]
-```
-- requires csound
-
-```bash
-pip install chgnhyk[window]
+pip install "chgnhyk[window]"
 ```
 - installs moderngl_window
 
 ```bash
-pip install chgnhyk[mediapipe]
+pip install "chgnhyk[audio]"
+```
+- requires csound
+
+```bash
+pip install "chgnhyk[mediapipe]"
 ```
 - installs mediapipe
 - downgrades numpy to 1.26.4
@@ -42,11 +42,6 @@ pip install chgnhyk[mediapipe]
 pip install "chgnhyk[opencv]"
 ```
 - install with opencv
-
-```bash
-pip install "chgnhyk[geometry]"
-```
-- install pyrr, trimesh and other functions related to vertex based drawing
 
 ```bash
 pip install "chgnhyk[audio, window, mediapipe]"
