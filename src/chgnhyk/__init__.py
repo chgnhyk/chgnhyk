@@ -1,7 +1,7 @@
 from .FBOPass import FBO
-from .GeometryFBO import Geom2DFBO, Geom3DFBO
+#from .GeometryFBO import Geom2DFBO, Geom3DFBO
 from .FBOTilePass import TileFBO
-from .FBOParticlePass import ParticlesFBO
+#from .FBOParticlePass import ParticlesFBO
 #from .OfflineEngine import ClipRenderer, ClipMerger, AddAudioToVideo
 #from .OfflineSound import AudioManager, note_to_freq
 from .utils import progress_bar, load_shader
@@ -20,6 +20,17 @@ except (ImportError, OSError):
     ClipRenderer = None
     ClipMerger = None
     AddAudioToVideo = None
+
+try:
+    from .GeometryFBO import Geom2DFBO, Geom3DFBO
+except (ImportError, OSError):
+    Geom2DFBO = None
+    Geom3DFBO = None
+
+try:
+    from .FBOParticlePass import ParticlesFBO
+except (ImportError, OSError):
+    ParticlesFBO = None
 
 try:
     from .RealtimeEngine import RealtimeEngine

@@ -10,10 +10,15 @@ from moviepy import ImageSequenceClip
 import re
 import time as tm
 
+
 from .FBOPass import FBO
 from .FBOTilePass import TileFBO
 from .GeometryFBO import Geom2DFBO, Geom3DFBO
+from .utils import progress_bar
 from typing import Union, Callable
+import av
+import numpy as np
+from pathlib import Path
 
 class RealtimeEngine:
     copier_fragment_shader = '''
@@ -30,7 +35,7 @@ class RealtimeEngine:
     }
     '''
 
-    def __init__(self, size=(540, 540), title='chgnhyk', frame_path='', fps=30):
+    def __init__(self, size=(540, 540), title='chgnhyk', frame_path='', fps=30, scale=1):
         # Configure to use pyglet window
         settings.WINDOW["vsync"] = False
         settings.WINDOW["title"] = title
@@ -43,8 +48,10 @@ class RealtimeEngine:
         self.fps = fps
         self.real_fps = fps
         self.frame_count = 0
+        self.scale = scale
         self.is_recording = False
         self.has_recorded = False
+        self.resizing = True
 
         self.crr_tm = tm.time()
         self.strt_tm = tm.time()
@@ -65,7 +72,16 @@ class RealtimeEngine:
         self.wnd.close_func = self.on_close
 
         self.input_func = None
+        self.resize_func = None
+        self.press_func = None
         self.passes = []
+        self.prev_mpos = (0,0)
+
+        self.last_click_time = 0
+        self.last_click_pos = (0, 0)
+        self.last_click_button = None
+        self.double_click_threshold = 0.3  # Max allowed time in seconds between clicks
+        self.double_click_max_distance = 5  # Max allowed movement in pixels
 
         self.render_fbo = FBO(ctx = self.ctx, size = self.size, shader = self.copier_fragment_shader)
 
@@ -74,7 +90,13 @@ class RealtimeEngine:
     def setRenderFunc(self, input_func:Callable):
         self.input_func = input_func
 
-    def addFBOPass(self, name: str, render_pass: Union[FBO, Geom2DFBO, Geom3DFBO], is_last = False):
+    def setResizeFunc(self, resize_func:Callable):
+        self.resize_func = resize_func
+
+    def setPressFunc(self, press_func:Callable):
+            self.press_func = press_func
+
+    def addFBOPass(self, name: str, render_pass: Union[FBO], is_last = False):
         self.passes.append({
             "render_pass": render_pass,
             "name": name
@@ -85,6 +107,9 @@ class RealtimeEngine:
 
     def on_render(self, time, frame_time):
         self.ctx.clear()
+        if self.resizing:
+            return
+        
         if callable(self.input_func):
             self.input_func(self, time)
         for i in range(len(self.passes)):
@@ -119,6 +144,21 @@ class RealtimeEngine:
 
     def on_resize(self, width: int, height: int):
         print("Window was resized. buffer size is {} x {}".format(width, height))
+        # settings.WINDOW["size"] = (width, height)
+        # settings.WINDOW["aspect_ratio"] = width / height
+        self.resizing = True
+        self.size = (width, height)
+        # self.aspect_ratio = width / height
+        self.ctx.viewport = (0, 0, width, height)
+        self.render_fbo.resize((width*self.scale, height*self.scale))
+        for i in range(len(self.passes)):
+            self.passes[i]["render_pass"].resize((width*self.scale, height*self.scale))
+            if i == len(self.passes) - 1:
+                self.render_fbo.set_texture_uniform(self.passes[i]["render_pass"].texture, "copy_target", 2, True)
+        if callable(self.resize_func):
+            self.resize_func(self)
+        
+        self.resizing = False
 
     def on_iconify(self, iconify: bool):
         """Window hide/minimize and restore"""
@@ -133,11 +173,41 @@ class RealtimeEngine:
                 frames.append(os.path.join(self.frame_path, f))
         frames.sort()
         
-        clip = ImageSequenceClip(frames, fps=self.fps)  # your fps here
-        clip.write_videofile(
-            os.path.join(self.frame_path.parent, "output.mp4"),
-            codec="libx264"
-        )
+        # clip = ImageSequenceClip(frames, fps=self.fps)  # your fps here
+        # clip.write_videofile(
+        #     os.path.join(self.frame_path.parent, "output.mp4"),
+        #     codec="libx264"
+        # )
+
+        output_path = Path(self.frame_path).parent.joinpath("output.mp4")
+
+        # Read the first frame to determine the video size
+        first_image = Image.open(frames[0])
+        width, height = first_image.size
+
+        with av.open(str(output_path), mode="w") as container:
+            stream = container.add_stream("libx264", rate=self.fps)
+            stream.width = width
+            stream.height = height
+            stream.pix_fmt = "yuv420p"
+
+            count = 0
+            for path in frames:
+                image = Image.open(path).convert("RGB")
+
+                frame = av.VideoFrame.from_ndarray(
+                    np.asarray(image),
+                    format="rgb24"
+                )
+
+                for packet in stream.encode(frame):
+                    container.mux(packet)
+
+                count += 1
+                progress_bar(100*count/len(frames))
+            # Flush the encoder
+            for packet in stream.encode():
+                container.mux(packet)
 
     def save_frame(self, name=""):
         last_pass = self.passes[len(self.passes)-1]["render_pass"]
@@ -189,14 +259,14 @@ class RealtimeEngine:
 
         # Move the window around with AWSD
         if action == keys.ACTION_PRESS:
-            if key == keys.A:
-                self.wnd.position = self.wnd.position[0] - 10, self.wnd.position[1]
-            if key == keys.D:
-                self.wnd.position = self.wnd.position[0] + 10, self.wnd.position[1]
-            if key == keys.W:
-                self.wnd.position = self.wnd.position[0], self.wnd.position[1] - 10
-            if key == keys.S:
-                self.wnd.position = self.wnd.position[0], self.wnd.position[1] + 10
+            # if key == keys.A:
+            #     self.wnd.position = self.wnd.position[0] - 10, self.wnd.position[1]
+            # if key == keys.D:
+            #     self.wnd.position = self.wnd.position[0] + 10, self.wnd.position[1]
+            # if key == keys.W:
+            #     self.wnd.position = self.wnd.position[0], self.wnd.position[1] - 10
+            # if key == keys.S:
+            #     self.wnd.position = self.wnd.position[0], self.wnd.position[1] + 10
 
             # toggle cursor
             if key == keys.C:
@@ -224,37 +294,78 @@ class RealtimeEngine:
 
     def on_mouse_position_event(self, x, y, dx, dy):
         #print("Mouse position pos={} {} delta={} {}".format(x, y, dx, dy))
-        mx = 0.5*x/self.size[0]
-        my = (1-0.5*(y/self.size[1]))
+        mx = x/self.size[0]
+        my = (1-(y/self.size[1]))
         for i in range(len(self.passes)):
             self.passes[i]["render_pass"].set_uniform("mouse_pos", (mx, my))
+            self.passes[i]["render_pass"].set_uniform("prev_mouse_pos", self.prev_mpos)
+
+        self.prev_mpos = (mx,my)
 
     def on_mouse_drag_event(self, x, y, dx, dy):
         #print("Mouse drag pos={} {} delta={} {}".format(x, y, dx, dy))
-        pass
+        #print("Mouse Dragged")
+        mx = x/self.size[0]
+        my = (1-(y/self.size[1]))
+        for i in range(len(self.passes)):
+            self.passes[i]["render_pass"].set_uniform("mouse_dragged", True)
+            self.passes[i]["render_pass"].set_uniform("mouse_pos", (mx, my))
+            self.passes[i]["render_pass"].set_uniform("prev_mouse_pos", self.prev_mpos)
+
+        self.prev_mpos = (mx,my)
 
     def on_mouse_scroll_event(self, x_offset, y_offset):
         #print("mouse_scroll_event", x_offset, y_offset)
         pass
 
     def on_mouse_press_event(self, x, y, button):
-        #print("Mouse button {} pressed at {}, {}".format(button, x, y))
-        #print("Mouse states:", self.wnd.mouse_states)
-        pass
+        crr_time = tm.time()
+        time_diff = crr_time - self.last_click_time
+        dist = math.hypot(x - self.last_click_pos[0], y - self.last_click_pos[1])
+
+        if (
+            time_diff <= self.double_click_threshold 
+            and button == self.last_click_button 
+            and dist <= self.double_click_max_distance
+        ):
+            # Double-click detected
+            self.on_mouse_double_click_event(x, y, button)
+            self.last_click_time = 0  # Reset to prevent a 3rd click triggering another double-click
+        else:
+            # Single-click recorded
+            self.last_click_time = crr_time
+            self.last_click_pos = (x, y)
+            self.last_click_button = button
+            # Send double click uniform/event to passes if needed
+            for i in range(len(self.passes)):
+                self.passes[i]["render_pass"].set_uniform("mouse_double_clicked", False)
+        for i in range(len(self.passes)):
+            self.passes[i]["render_pass"].set_uniform("mouse_pressed", True)
+
+        if callable(self.press_func):
+            self.press_func(self)
 
     def on_mouse_release_event(self, x: int, y: int, button: int):
-        #print("Mouse button {} released at {}, {}".format(button, x, y))
-        #print("Mouse states:", self.wnd.mouse_states)
-        pass
+        for i in range(len(self.passes)):
+            self.passes[i]["render_pass"].set_uniform("mouse_pressed", False)
+            self.passes[i]["render_pass"].set_uniform("mouse_dragged", False)
+        
+
+        
+
+    def on_mouse_double_click_event(self, x, y, button):
+        mx = x / self.size[0]
+        my = (1 - (y / self.size[1]))
+        
+        # Send double click uniform/event to passes if needed
+        for i in range(len(self.passes)):
+            self.passes[i]["render_pass"].set_uniform("mouse_double_clicked", True)
 
     def on_unicode_char_entered(self, char):
         #print("unicode_char_entered:", char)
         pass
 
     def on_close(self):
-        for i in range(len(self.passes)):
-            self.passes[i]["render_pass"].release_all()
-
         if self.has_recorded:
             self._save_executor.shutdown(wait=True)
             self._encode_video()
@@ -262,4 +373,7 @@ class RealtimeEngine:
             for f in os.listdir(self.frame_path):
                 if re.match(r'^(\d{6})\.jpg$', f):
                     os.remove(os.path.join(self.frame_path, f))
+
+        for i in range(len(self.passes)):
+            self.passes[i]["render_pass"].release_all()
         print("Window was closed")

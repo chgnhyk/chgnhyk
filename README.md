@@ -44,6 +44,11 @@ pip install "chgnhyk[opencv]"
 - install with opencv
 
 ```bash
+pip install "chgnhyk[geometry]"
+```
+- install pyrr, trimesh and other functions related to vertex based drawing
+
+```bash
 pip install "chgnhyk[audio, window, mediapipe]"
 ```
 - install with three options

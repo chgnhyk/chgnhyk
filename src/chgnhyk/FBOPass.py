@@ -38,17 +38,16 @@ class FBO:
     }
     '''
 
-    def __init__(self, ctx, size, shader, enable_backbuffer = False, rest_time = 0.0):
+    def __init__(self, ctx, size, shader, enable_backbuffer = False, rest_time = 0.0, scale = 1):
         self.ctx = ctx
-        self.size = size
+        self.scale = scale
+        self.size = (int(size[0]*self.scale), int(size[1]*self.scale))
         self.enable_backbuffer = enable_backbuffer
         self.rest_time = rest_time
-
-        self.texture = self.ctx.texture(self.size, components=4, dtype="f4")
-        self.fbo = self.ctx.framebuffer(self.texture)
         self.prog = self.ctx.program(
-            vertex_shader=self.quad_vertex_shader, fragment_shader=shader)
-
+                    vertex_shader=self.quad_vertex_shader, fragment_shader=shader)
+        self.resized = False
+        
         vertex_data = np.array([
             -1.0, -1.0, 0.0, 0.0,
             +1.0, -1.0, 1.0, 0.0,
@@ -63,6 +62,19 @@ class FBO:
         )]
 
         self.vao = self.ctx.vertex_array(self.prog, content)
+        if self.enable_backbuffer == True:
+            self.bck_prog = self.ctx.program(
+                vertex_shader=self.quad_vertex_shader, fragment_shader=self.copier_fragment_shader)
+            self.bck_vao = self.ctx.vertex_array(self.bck_prog, content)
+        self.setup()
+
+    def setup(self):
+        self.texture = self.ctx.texture(self.size, components=4, dtype="f4")
+        self.fbo = self.ctx.framebuffer(self.texture)
+        
+
+        self.textures = {}
+        self.texture_uniforms = {}
 
         self.time = self.prog.get('time', FakeUniform())
         self.resolution = self.prog.get('resolution', FakeUniform())
@@ -72,18 +84,16 @@ class FBO:
         else:
             print(f'unable to set resolution uniform {self.resolution}')
 
-        self.textures = {}
-        self.texture_uniforms = {}
+        
 
         if self.enable_backbuffer == True:
             self.bck_texture = self.ctx.texture(
                 self.size, components=4, dtype="f4")
             self.bck_fbo = self.ctx.framebuffer(self.bck_texture)
-            self.bck_prog = self.ctx.program(
-                vertex_shader=self.quad_vertex_shader, fragment_shader=self.copier_fragment_shader)
-            self.bck_vao = self.ctx.vertex_array(self.bck_prog, content)
             
-            self.set_texture_uniform(self.bck_texture, "bckbuffer", 0)
+            
+            
+            self.set_texture_uniform(self.bck_texture, "bckbuffer", 0, True)
             
             self.copy_target_uniform = self.bck_prog.get(
                 'copy_target', FakeUniform())
@@ -91,11 +101,18 @@ class FBO:
         else:
             self.bck_fbo = None
 
-        
+    def resize(self, _size):
+        self.release_all()     
+        self.size = (int(_size[0]*self.scale), int(_size[1]*self.scale))
+        self.setup()
+        self.resized = True
+        self.set_uniform("resized", self.resized)
 
     def release_all(self):
-        if hasattr(self, 'bck_texture'):
-            self.bck_texture.release()
+        self.fbo.release()
+        if self.enable_backbuffer == True:
+            self.bck_fbo.release()
+        
         for (name, texture) in self.textures.items():
             self.textures[name].release()
         self.texture.release()
@@ -181,8 +198,9 @@ class FBO:
         if render_to_window:
             self.ctx.screen.use()
         else:
-            
             self.fbo.use()
+
+        
 
         for (name, texture) in self.textures.items():
             textureid = self.texture_uniforms[name].value
@@ -200,9 +218,15 @@ class FBO:
             self.texture.use(location=0)
             self.bck_vao.render(moderngl.TRIANGLE_STRIP)
 
+        if self.resized == True:
+            self.resized = False
+            self.set_uniform("resized", self.resized)
+
     def release(self, name):
         for (_name, texture) in self.textures.items():
             if _name == name:
                 texture.release()
+
+        
 
 
