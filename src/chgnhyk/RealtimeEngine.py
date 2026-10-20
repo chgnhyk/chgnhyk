@@ -1,4 +1,17 @@
+from .FBOPass import FBO
+from .FBOTilePass import TileFBO
+from .GeometryFBO import Geom2DFBO, Geom3DFBO
+from .utils import progress_bar
+
 import moderngl_window
+import pyglet
+if not hasattr(pyglet, 'canvas'):
+    try:
+        import pyglet.canvas
+    except ImportError:
+        import pyglet.display
+        pyglet.canvas = pyglet.display
+
 from moderngl_window.conf import settings
 from moderngl_window.timers.clock import Timer
 import math
@@ -11,10 +24,7 @@ import re
 import time as tm
 
 
-from .FBOPass import FBO
-from .FBOTilePass import TileFBO
-from .GeometryFBO import Geom2DFBO, Geom3DFBO
-from .utils import progress_bar
+
 from typing import Union, Callable
 import av
 import numpy as np
@@ -35,13 +45,19 @@ class RealtimeEngine:
     }
     '''
 
-    def __init__(self, size=(540, 540), title='chgnhyk', frame_path='', fps=30, scale=1):
+    def __init__(self, size=(540, 540), title='chgnhyk', frame_path='', fps=30, scale=1, fullscreen = False, backend = "pyglet"):
         # Configure to use pyglet window
         settings.WINDOW["vsync"] = False
         settings.WINDOW["title"] = title
         settings.WINDOW["size"] = size
         settings.WINDOW["aspect_ratio"] = size[0] / size[1]
-        settings.WINDOW["class"] = "moderngl_window.context.pyglet.Window"
+        if backend == "pyglet":
+            settings.WINDOW["class"] = "moderngl_window.context.pyglet.Window"
+        elif backend == "glfw":
+            settings.WINDOW["class"] = "moderngl_window.context.glfw.Window"
+        if fullscreen:
+            settings.WINDOW["fullscreen"] = True
+            settings.WINDOW["aspect_ratio"] = None
         self.wnd = moderngl_window.create_window_from_settings()
         self.ctx = self.wnd.ctx
         self.size = size
@@ -86,6 +102,8 @@ class RealtimeEngine:
         self.render_fbo = FBO(ctx = self.ctx, size = self.size, shader = self.copier_fragment_shader)
 
         self._save_executor = ThreadPoolExecutor(max_workers=2)
+
+        self.on_resize(*self.wnd.buffer_size)
 
     def setRenderFunc(self, input_func:Callable):
         self.input_func = input_func

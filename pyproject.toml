@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "chgnhyk"
-version = "0.0.22"
+version = "0.0.23"
 description = "visual engine of chgnhyk"
 readme = "README.md"
 requires-python = ">=3.9.0"
@@ -31,7 +31,8 @@ audio = [
     "csoundengine"
 ]
 window = [
-    "moderngl_window"
+    "moderngl_window",
+    "glfw"
 ]
 
 [tool.hatch.build.targets.wheel]
