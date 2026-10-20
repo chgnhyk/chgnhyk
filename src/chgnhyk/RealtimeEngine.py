@@ -15,18 +15,21 @@ if not hasattr(pyglet, 'canvas'):
 from moderngl_window.conf import settings
 from moderngl_window.timers.clock import Timer
 import math
-import random
 import os
 from PIL import Image
 from concurrent.futures import ThreadPoolExecutor
-from moviepy import ImageSequenceClip
 import re
 import time as tm
 
 
 
 from typing import Union, Callable
-import av
+
+try:
+    import av
+except (ImportError, OSError):
+    av = None
+
 import numpy as np
 from pathlib import Path
 
