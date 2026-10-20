@@ -23,6 +23,11 @@ libcsnd6-6.0v5
 
 ### Installation options
 ```bash
+pip install "chgnhyk[video]"
+```
+- installs av, moviepy
+
+```bash
 pip install "chgnhyk[window]"
 ```
 - installs moderngl_window
